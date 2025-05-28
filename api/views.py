@@ -8,3 +8,6 @@ from rest_framework.response import Response
 @api_view(['GET'])
 def index(request):
     return Response({"message": "Welcome to the UrbanAI API!"})
+
+def map_view(request):
+    return render(request, 'map.html')

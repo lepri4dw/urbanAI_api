@@ -29,3 +29,13 @@ The API will be available at http://127.0.0.1:8000/api/
 ## API Endpoints
 
 - `GET /api/` - Welcome message 
+
+## Новый интерфейс карты и статистики
+
+В проект добавлен современный монохромный UI для анализа городской инфраструктуры Бишкека:
+- Карта на Leaflet с выбором районов и режимов анализа
+- Статистическая панель с Chart.js, метриками и прогресс-барами
+- Glassmorphism, адаптивность, анимации, particle-эффекты
+- Bootstrap 5, Font Awesome, Chart.js, Leaflet
+
+HTML-шаблон находится в `templates/map.html` (создать папку, если её нет). 
