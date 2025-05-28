@@ -2,17 +2,30 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
 from django.db.models import Avg, Sum, Count
+from django.core.exceptions import ObjectDoesNotExist
 import json
 import numpy as np
 from .models import *
 
+def index(request):
+    """Главная страница с картой"""
+    return render(request, 'index.html')
+
 @api_view(['GET'])
 def api_index(request):
-    return Response({"message": "UrbanAI API v1.0"})
-
-def index(request):
-    return render(request, 'index.html')
+    """API endpoint"""
+    return Response({
+        "message": "UrbanAI API v1.0",
+        "endpoints": {
+            "analyze": "/api/analyze/",
+            "population": "/api/population/",
+            "infrastructure": "/api/infrastructure/",
+            "building_zones": "/api/building-zones/",
+            "schools_geojson": "/api/schools/geojson/"
+        }
+    })
 
 @api_view(['GET'])
 def population_data(request):
@@ -81,28 +94,45 @@ def building_zones(request):
 @api_view(['POST'])
 def analyze(request):
     """Анализ и поиск оптимального места для школы"""
-    data = json.loads(request.body)
-    districts = data.get('districts', [])
-    modes = data.get('modes', [])
-    
-    # Получение базовых данных
-    stats = calculate_district_stats(districts)
-    
-    # Поиск оптимальных мест для школ
-    optimal_locations = []
-    if 'education' in modes:
-        optimal_locations = find_optimal_school_locations(districts)
-    
-    result = {
-        'status': 'success',
-        'districts': districts,
-        'modes': modes,
-        'statistics': stats,
-        'optimal_locations': optimal_locations,
-        'recommendations': generate_recommendations(stats, districts)
-    }
-    
-    return JsonResponse(result)
+    try:
+        data = json.loads(request.body)
+        districts = data.get('districts', [])
+        modes = data.get('modes', [])
+        
+        if not districts:
+            return Response(
+                {"error": "No districts specified"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Получение базовых данных
+        stats = calculate_district_stats(districts)
+        
+        # Поиск оптимальных мест для школ
+        optimal_locations = []
+        if 'education' in modes:
+            optimal_locations = find_optimal_school_locations(districts)
+        
+        result = {
+            'status': 'success',
+            'districts': districts,
+            'modes': modes,
+            'statistics': stats,
+            'optimal_locations': optimal_locations,
+            'recommendations': generate_recommendations(stats, districts)
+        }
+        
+        return Response(result)
+    except json.JSONDecodeError:
+        return Response(
+            {"error": "Invalid JSON in request body"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 def calculate_district_stats(districts):
     """Расчет статистики по районам"""
