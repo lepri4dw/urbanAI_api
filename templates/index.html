@@ -3,678 +3,702 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта Бишкека - Анализ городской инфраструктуры</title>
-    <!-- Bootstrap 5 -->
+    <title>UrbanAI - Система анализа</title>
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Leaflet -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" rel="stylesheet">
+    
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            --secondary-gradient: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-            --dark-gradient: linear-gradient(135deg, #212529 0%, #000000 100%);
-            --glass-light: rgba(255, 255, 255, 0.1);
-            --glass-dark: rgba(0, 0, 0, 0.1);
-            --border-light: rgba(255, 255, 255, 0.2);
-            --border-dark: rgba(0, 0, 0, 0.2);
+            --primary: #1e3a8a;
+            --secondary: #374151;
+            --accent: #2563eb;
+            --surface: #f8fafc;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #d1d5db;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            background: linear-gradient(45deg, #f8f9fa, #e9ecef, #dee2e6, #ced4da);
-            background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
-            min-height: 100vh;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            overflow-x: hidden;
-            position: relative;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            height: 100vh;
+            overflow: hidden;
         }
-        
-        body::before {
-            content: '';
+
+        /* Сетка */
+        .grid-bg {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(0, 0, 0, 0.05) 0%, transparent 50%);
+            background-image: 
+                linear-gradient(rgba(30, 58, 138, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 58, 138, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            animation: gridMove 20s linear infinite;
             pointer-events: none;
             z-index: -1;
         }
-        
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(40px, 40px); }
         }
-        
-        .main-container {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            padding: 0;
-            overflow: hidden;
-            position: relative;
-            transform: perspective(1000px) rotateX(1deg);
-            transition: all 0.6s cubic-bezier(0.23, 1, 0.320, 1);
+
+        /* Главный контейнер */
+        .main-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
         }
-        
-        .main-container:hover {
-            transform: perspective(1000px) rotateX(0deg) translateY(-5px);
-            box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.4s ease;
         }
-        
+
+        /* Заголовок */
         .header {
-            background: var(--dark-gradient);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             color: white;
-            padding: 3rem;
-            text-align: center;
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid var(--border);
             position: relative;
             overflow: hidden;
-            border-bottom: 1px solid var(--border-dark);
         }
-        
+
         .header::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
+            top: 0;
+            left: -100%;
             width: 200%;
-            height: 200%;
-            background: 
-                radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                radial-gradient(circle, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
-            background-size: 40px 40px, 60px 60px;
-            animation: drift 25s linear infinite;
-            pointer-events: none;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: headerSweep 4s infinite;
         }
-        
-        @keyframes drift {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(-40px, -40px) rotate(360deg); }
+
+        @keyframes headerSweep {
+            0% { left: -100%; }
+            100% { left: 100%; }
         }
-        
+
         .header h1 {
-            font-size: 3rem;
+            font-size: 2rem;
             font-weight: 800;
             margin: 0;
-            position: relative;
-            z-index: 1;
-            background: linear-gradient(45deg, #ffffff, #adb5bd, #6c757d);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: gradientText 4s ease infinite;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
         }
-        
-        @keyframes gradientText {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
+
         .header p {
-            font-size: 1.1rem;
-            margin-top: 1rem;
-            opacity: 0.8;
-            font-weight: 300;
-            letter-spacing: 1px;
-            color: #adb5bd;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin: 0.3rem 0 0 0;
         }
-        
+
+        /* Панель управления */
         .control-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(15px);
-            border-bottom: 1px solid var(--border-light);
-            padding: 2.5rem;
-            position: relative;
+            background: var(--surface);
+            border-bottom: 2px solid var(--border);
+            padding: 1.5rem 2rem;
+            flex-shrink: 0;
         }
-        
-        .mode-btn {
-            background: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            margin: 0.5rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            display: inline-flex;
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-weight: 600;
-            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        
-        .mode-btn:hover {
-            transform: translateY(-2px);
-            background: rgba(0, 0, 0, 0.1);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-        
-        .mode-btn.active {
-            background: var(--dark-gradient);
+
+        .section-icon {
+            background: var(--primary);
             color: white;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            animation: iconPulse 3s ease-in-out infinite;
         }
-        
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Кнопки */
+        .mode-btn {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 0.8rem 1.2rem;
+            margin: 0.3rem;
+            color: var(--text);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .mode-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.2);
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
         .district-card {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 16px;
-            padding: 1.5rem;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
             margin: 0.5rem 0;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        .district-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
         .district-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-            background: rgba(255, 255, 255, 0.95);
+            border-color: var(--primary);
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(30, 58, 138, 0.15);
         }
-        
+
+        .district-card:hover::before {
+            transform: scaleY(1);
+        }
+
         .district-card.active {
-            background: var(--secondary-gradient);
+            background: var(--primary);
             color: white;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary);
         }
-        
+
+        .district-card.active::before {
+            background: white;
+            transform: scaleY(1);
+        }
+
         .district-name {
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
         }
-        
+
         .district-info {
-            font-size: 0.9rem;
             opacity: 0.7;
+            font-size: 0.8rem;
         }
-        
+
         .analyze-btn {
-            background: var(--dark-gradient);
+            background: linear-gradient(135deg, var(--success) 0%, var(--primary) 100%);
             border: none;
-            border-radius: 16px;
-            padding: 1.5rem 3rem;
+            border-radius: 8px;
+            padding: 1.2rem 2rem;
             color: white;
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
             letter-spacing: 1px;
+            width: 100%;
         }
-        
+
         .analyze-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
         }
-        
-        .statistics-panel {
-            position: absolute;
-            top: 0;
-            right: -400px;
-            width: 400px;
+
+        /* Карта */
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: var(--surface);
+        }
+
+        #map {
             height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-left: 1px solid var(--border-light);
-            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
-            transition: right 0.4s ease;
+            width: 100%;
+        }
+
+        /* Панель статистики */
+        .stats-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(248, 250, 252, 0.98);
+            backdrop-filter: blur(25px);
+            border-left: 3px solid var(--primary);
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
             overflow-y: auto;
+            box-shadow: -15px 0 50px rgba(30, 58, 138, 0.2);
         }
-        
-        .statistics-panel.open {
-            right: 0;
+
+        .stats-panel.visible {
+            transform: translateX(0);
         }
-        
+
+        .stats-panel.minimized {
+            transform: translateX(calc(100% - 60px));
+        }
+
         .stats-toggle {
             position: absolute;
-            left: -50px;
+            left: -60px;
             top: 50%;
             transform: translateY(-50%);
-            background: var(--dark-gradient);
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 10px 0 0 10px;
+            border-radius: 8px 0 0 8px;
             padding: 15px 10px;
             cursor: pointer;
             writing-mode: vertical-rl;
-            font-weight: 600;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            width: 60px;
+        }
+
+        .stats-toggle:hover {
+            background: var(--accent);
+        }
+
+        .stats-header {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 1.5rem;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-header h3 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .minimize-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            padding: 0.4rem;
+            cursor: pointer;
             transition: all 0.3s ease;
         }
-        
-        .stats-toggle:hover {
-            background: var(--secondary-gradient);
+
+        .minimize-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
         }
-        
-        .stats-header {
-            padding: 2rem;
-            background: var(--dark-gradient);
-            color: white;
-            text-align: center;
-            border-bottom: 1px solid var(--border-light);
+
+        .stats-content {
+            padding: 1.5rem;
         }
-        
-        .stats-header h3 {
-            margin: 0;
-            font-size: 1.3rem;
+
+        .stats-section {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .stats-section:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 58, 138, 0.1);
+        }
+
+        .stats-section h4 {
+            color: var(--primary);
+            font-size: 0.9rem;
             font-weight: 700;
+            margin-bottom: 1rem;
             text-transform: uppercase;
             letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        
-        .stats-content {
-            padding: 2rem;
+
+        .stats-section h4::before {
+            content: '';
+            width: 3px;
+            height: 15px;
+            background: var(--primary);
+            border-radius: 1px;
         }
-        
-        .stats-section {
-            margin-bottom: 2rem;
-            background: rgba(0, 0, 0, 0.03);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        
-        .stats-section h4 {
-            margin: 0 0 1rem 0;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #495057;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
+
         .metric {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s ease;
         }
-        
+
         .metric:last-child {
             border-bottom: none;
         }
-        
+
+        .metric:hover {
+            background: rgba(30, 58, 138, 0.05);
+            border-radius: 6px;
+            padding: 0.8rem 0.8rem;
+            margin: 0 -0.8rem;
+        }
+
         .metric-label {
-            font-size: 0.9rem;
-            color: #6c757d;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            font-weight: 500;
         }
-        
+
         .metric-value {
-            font-weight: 600;
-            color: #212529;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1rem;
         }
-        
-        .chart-container {
-            height: 200px;
-            margin-top: 1rem;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        
+
         .progress-bar {
             width: 100%;
-            height: 8px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 4px;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
             overflow: hidden;
-            margin-top: 0.5rem;
+            margin-top: 0.6rem;
         }
-        
+
         .progress-fill {
             height: 100%;
-            background: var(--secondary-gradient);
-            transition: width 0.3s ease;
-        }
-        
-        .map-container {
-            height: 700px;
-            background: rgba(248, 249, 250, 0.9);
-            border-radius: 0 0 24px 24px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transition: width 1s ease;
+            border-radius: 3px;
             position: relative;
-            overflow: hidden;
-            border-top: 1px solid var(--border-light);
         }
-        
-        #map {
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
             height: 100%;
-            width: 100%;
-            border-radius: 0 0 24px 24px;
-            filter: grayscale(20%) contrast(1.1);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: progressShine 2s infinite;
         }
-        
+
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .chart-container {
+            height: 220px;
+            margin-top: 1rem;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.8rem;
+        }
+
+        /* Лоадер */
         .loading {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(15px);
-            border: 1px solid var(--border-light);
+            background: rgba(248, 250, 252, 0.95);
+            backdrop-filter: blur(20px);
+            border: 3px solid var(--primary);
             padding: 2rem;
-            border-radius: 16px;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
         }
-        
+
         .spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-top: 3px solid #495057;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 1rem;
         }
-        
-        .loading p {
-            font-size: 1rem;
-            font-weight: 500;
-            color: #495057;
-            margin: 0;
-        }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .section-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #212529;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .icon {
-            background: var(--secondary-gradient);
-            color: white;
-            padding: 0.7rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        @media (max-width: 768px) {
-            .main-container {
-                margin: 0.5rem;
-                border-radius: 16px;
-                transform: none;
-            }
-            
-            .main-container:hover {
-                transform: none;
-            }
-            
-            .header {
-                padding: 2rem 1rem;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .control-panel {
-                padding: 1.5rem;
-            }
-            
-            .mode-btn {
-                padding: 0.8rem 1rem;
-                font-size: 0.85rem;
-                margin: 0.3rem;
-            }
-            
-            .district-card {
-                padding: 1rem;
-                margin: 0.5rem 0;
-            }
-            
-            .analyze-btn {
-                padding: 1rem 2rem;
-                font-size: 1rem;
-            }
-            
-            .map-container {
-                height: 400px;
-            }
-            
-            .statistics-panel {
-                width: 100%;
-                right: -100%;
-            }
-            
-            .stats-toggle {
-                left: -30px;
-                font-size: 0.8rem;
-            }
-        }
-        
-        .particles {
+
+        /* Уведомления */
+        .notification {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 9999;
+            transform: translateX(100%);
+            transition: transform 0.4s ease;
+            border: 2px solid;
         }
-        
-        .particle {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            background: #6c757d;
-            border-radius: 50%;
-            animation: float 25s infinite linear;
-            opacity: 0.3;
+
+        .notification.success {
+            background: var(--success);
+            border-color: #047857;
         }
-        
-        .particle:nth-child(2n) {
-            background: #adb5bd;
-            animation-duration: 30s;
+
+        .notification.warning {
+            background: var(--warning);
+            border-color: #d97706;
         }
-        
-        .particle:nth-child(3n) {
-            background: #495057;
-            animation-duration: 35s;
+
+        .notification.error {
+            background: var(--error);
+            border-color: #dc2626;
         }
-        
-        @keyframes float {
-            0% {
-                transform: translateY(100vh) translateX(0);
-                opacity: 0;
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .stats-panel {
+                width: 100vw;
             }
-            10% {
-                opacity: 0.3;
-            }
-            90% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: translateY(-100vh) translateX(50px);
-                opacity: 0;
+            
+            .content-area.collapsed {
+                margin-right: 100vw;
             }
         }
     </style>
 </head>
 <body>
-    <div class="particles"></div>
+    <div class="grid-bg"></div>
     
-    <div class="container-fluid py-4">
-        <div class="main-container mx-auto" style="max-width: 1200px;">
+    <div class="main-layout">
+        <div class="content-area" id="contentArea">
+            <!-- Заголовок -->
             <div class="header">
-                <h1><i class="fas fa-map-marked-alt me-2"></i>Карта Бишкека</h1>
-                <p class="mb-0">Интерактивный анализ городской инфраструктуры</p>
+                <h1><i class="fas fa-building me-2"></i>UrbanAI</h1>
+                <p>Государственная система анализа городской инфраструктуры</p>
             </div>
-            
+
+            <!-- Панель управления -->
             <div class="control-panel">
-                <div class="row">
-                    <div class="col-lg-4">
-                        <div class="mode-selector">
-                            <h3 class="section-title">
-                                <span class="icon"><i class="fas fa-cogs"></i></span>
-                                Режимы анализа
-                            </h3>
-                            <div class="d-flex flex-wrap">
-                                <button class="mode-btn" data-mode="schools">
-                                    <i class="fas fa-graduation-cap"></i>Школы
-                                </button>
-                                <button class="mode-btn" data-mode="kindergartens">
-                                    <i class="fas fa-child"></i>Садики
-                                </button>
-                                <button class="mode-btn" data-mode="hospitals">
-                                    <i class="fas fa-hospital"></i>Больницы
-                                </button>
-                                <button class="mode-btn" data-mode="fireStations">
-                                    <i class="fas fa-fire-extinguisher"></i>Пожарные части
-                                </button>
-                            </div>
+                <div class="row g-3">
+                    <!-- Режимы -->
+                    <div class="col-md-4">
+                        <h3 class="section-title">
+                            <span class="section-icon"><i class="fas fa-cogs"></i></span>
+                            Режимы анализа
+                        </h3>
+                        <div class="d-flex flex-wrap">
+                            <button class="mode-btn" data-mode="education">
+                                <i class="fas fa-graduation-cap me-1"></i>Образование
+                            </button>
+                            <button class="mode-btn" data-mode="healthcare">
+                                <i class="fas fa-hospital me-1"></i>Здравоохранение
+                            </button>
+                            <button class="mode-btn" data-mode="fire">
+                                <i class="fas fa-fire-extinguisher me-1"></i>Пожарная служба
+                            </button>
                         </div>
                     </div>
-                    
-                    <div class="col-lg-5">
-                        <div class="district-selector">
-                            <h3 class="section-title">
-                                <span class="icon"><i class="fas fa-map"></i></span>
-                                Районы города
-                            </h3>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="district-card" data-district="октябрьский">
-                                        <div class="district-name">Октябрьский</div>
-                                        <div class="district-info">Центральный район</div>
-                                    </div>
-                                    <div class="district-card" data-district="первомайский">
-                                        <div class="district-name">Первомайский</div>
-                                        <div class="district-info">Восточный район</div>
-                                    </div>
+
+                    <!-- Районы -->
+                    <div class="col-md-5">
+                        <h3 class="section-title">
+                            <span class="section-icon"><i class="fas fa-map-marked-alt"></i></span>
+                            Районы
+                        </h3>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="district-card" data-district="oktyabrsky">
+                                    <div class="district-name">Октябрьский</div>
+                                    <div class="district-info">Центральный</div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="district-card" data-district="ленинский">
-                                        <div class="district-name">Ленинский</div>
-                                        <div class="district-info">Южный район</div>
-                                    </div>
-                                    <div class="district-card" data-district="свердловский">
-                                        <div class="district-name">Свердловский</div>
-                                        <div class="district-info">Западный район</div>
-                                    </div>
+                                <div class="district-card" data-district="pervomaysky">
+                                    <div class="district-name">Первомайский</div>
+                                    <div class="district-info">Восточный</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="district-card" data-district="leninsky">
+                                    <div class="district-name">Ленинский</div>
+                                    <div class="district-info">Южный</div>
+                                </div>
+                                <div class="district-card" data-district="sverdlovsky">
+                                    <div class="district-name">Свердловский</div>
+                                    <div class="district-info">Западный</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-lg-3 d-flex align-items-end">
-                        <button class="analyze-btn w-100" id="analyzeBtn">
-                            <i class="fas fa-chart-line me-2"></i>АНАЛИЗ
+
+                    <!-- Анализ -->
+                    <div class="col-md-3">
+                        <h3 class="section-title" style="visibility: hidden;">Действия</h3>
+                        <button class="analyze-btn" id="analyzeBtn">
+                            <i class="fas fa-play me-2"></i>Анализ
                         </button>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Карта -->
             <div class="map-container">
                 <div id="map"></div>
+                
                 <div class="loading d-none" id="loading">
                     <div class="spinner"></div>
-                    <p>Загрузка анализа...</p>
+                    <div style="color: var(--primary); font-weight: 600;">Анализ данных</div>
                 </div>
-                
-                <!-- Statistics Panel -->
-                <div class="statistics-panel" id="statsPanel">
-                    <button class="stats-toggle" id="statsToggle">СТАТИСТИКА</button>
-                    
-                    <div class="stats-header">
-                        <h3>Аналитика</h3>
+            </div>
+        </div>
+
+        <!-- Панель статистики -->
+        <div class="stats-panel" id="statsPanel">
+            <button class="stats-toggle" id="statsToggle">ДАННЫЕ</button>
+            
+            <div class="stats-header">
+                <h3><i class="fas fa-chart-bar me-2"></i>Статистика</h3>
+                <div>
+                    <button class="minimize-btn me-2" id="minimizeBtn">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button class="minimize-btn" id="closeBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-content">
+                <!-- Показатели -->
+                <div class="stats-section">
+                    <h4>Основные показатели</h4>
+                    <div class="metric">
+                        <span class="metric-label">Объектов</span>
+                        <span class="metric-value" id="totalObjects">0</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Охват (%)</span>
+                        <span class="metric-value" id="coverage">0</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Эффективность</span>
+                        <span class="metric-value" id="efficiency">0</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Плотность (км²)</span>
+                        <span class="metric-value" id="density">0</span>
+                    </div>
+                </div>
+
+                <!-- Категории -->
+                <div class="stats-section">
+                    <h4>По категориям</h4>
+                    <div class="metric">
+                        <span class="metric-label">Образование</span>
+                        <span class="metric-value" id="eduCount">0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="eduProgress" style="width: 0%"></div>
                     </div>
                     
-                    <div class="stats-content">
-                        <div class="stats-section">
-                            <h4>Общие показатели</h4>
-                            <div class="metric">
-                                <span class="metric-label">Всего объектов</span>
-                                <span class="metric-value" id="totalObjects">-</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-label">Покрытие районов</span>
-                                <span class="metric-value" id="districtCoverage">-</span>
-                            </div>
-                            <div class="metric">
-                                <span class="metric-label">Плотность/км²</span>
-                                <span class="metric-value" id="density">-</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stats-section">
-                            <h4>По типам объектов</h4>
-                            <div class="metric">
-                                <span class="metric-label">Школы</span>
-                                <span class="metric-value" id="schoolsCount">-</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="schoolsProgress" style="width: 0%"></div>
-                            </div>
-                            
-                            <div class="metric">
-                                <span class="metric-label">Садики</span>
-                                <span class="metric-value" id="kindergartensCount">-</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="kindergartensProgress" style="width: 0%"></div>
-                            </div>
-                            
-                            <div class="metric">
-                                <span class="metric-label">Больницы</span>
-                                <span class="metric-value" id="hospitalsCount">-</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="hospitalsProgress" style="width: 0%"></div>
-                            </div>
-                            
-                            <div class="metric">
-                                <span class="metric-label">Пожарные части</span>
-                                <span class="metric-value" id="fireStationsCount">-</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="fireStationsProgress" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="stats-section">
-                            <h4>Распределение по районам</h4>
-                            <canvas id="districtChart" class="chart-container"></canvas>
-                        </div>
-                        
-                        <div class="stats-section">
-                            <h4>Эффективность покрытия</h4>
-                            <canvas id="efficiencyChart" class="chart-container"></canvas>
+                    <div class="metric">
+                        <span class="metric-label">Здравоохранение</span>
+                        <span class="metric-value" id="healthCount">0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="healthProgress" style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="metric">
+                        <span class="metric-label">Пожарная служба</span>
+                        <span class="metric-value" id="fireCount">0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="fireProgress" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- График районов -->
+                <div class="stats-section">
+                    <h4>Распределение</h4>
+                    <canvas id="districtChart" class="chart-container"></canvas>
+                </div>
+
+                <!-- График трендов -->
+                <div class="stats-section">
+                    <h4>Динамика</h4>
+                    <canvas id="trendChart" class="chart-container"></canvas>
+                </div>
+
+                <!-- Рекомендации -->
+                <div class="stats-section">
+                    <h4>Рекомендации</h4>
+                    <div id="recommendations">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-light);">
+                            <i class="fas fa-lightbulb fa-2x mb-2" style="color: var(--primary);"></i>
+                            <p>Запустите анализ</p>
                         </div>
                     </div>
                 </div>
@@ -682,250 +706,352 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <!-- Leaflet JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     
     <script>
-        // Particles
-        function createParticles() {
-            const container = document.querySelector('.particles');
-            for (let i = 0; i < 30; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 20 + 's';
-                container.appendChild(particle);
+        // Глобальные переменные
+        let map, selectedModes = [], selectedDistricts = [];
+        let districtLayers = {}, charts = {};
+        let isAnalyzing = false, statsVisible = false, statsMinimized = false;
+
+        // Инициализация карты
+        function initMap() {
+            map = L.map('map').setView([42.8746, 74.5698], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            
+            const districts = {
+                oktyabrsky: { bounds: [[42.850, 74.540], [42.900, 74.600]], color: '#1e3a8a' },
+                pervomaysky: { bounds: [[42.830, 74.580], [42.890, 74.640]], color: '#2563eb' },
+                leninsky: { bounds: [[42.810, 74.560], [42.870, 74.620]], color: '#374151' },
+                sverdlovsky: { bounds: [[42.800, 74.520], [42.860, 74.580]], color: '#1f2937' }
+            };
+            
+            Object.keys(districts).forEach(name => {
+                const district = districts[name];
+                districtLayers[name] = L.rectangle(district.bounds, {
+                    color: district.color,
+                    weight: 2,
+                    opacity: 0,
+                    fillOpacity: 0,
+                    fillColor: district.color
+                }).addTo(map);
+            });
+        }
+
+        // Обработчики событий
+        function initHandlers() {
+            // Режимы
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const mode = this.dataset.mode;
+                    this.classList.toggle('active');
+                    
+                    if (selectedModes.includes(mode)) {
+                        selectedModes = selectedModes.filter(m => m !== mode);
+                    } else {
+                        selectedModes.push(mode);
+                    }
+                });
+            });
+
+            // Районы
+            document.querySelectorAll('.district-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const district = this.dataset.district;
+                    this.classList.toggle('active');
+                    
+                    if (selectedDistricts.includes(district)) {
+                        selectedDistricts = selectedDistricts.filter(d => d !== district);
+                        districtLayers[district].setStyle({ opacity: 0, fillOpacity: 0 });
+                    } else {
+                        selectedDistricts.push(district);
+                        districtLayers[district].setStyle({ opacity: 0.8, fillOpacity: 0.3 });
+                    }
+                });
+            });
+
+            // Анализ
+            document.getElementById('analyzeBtn').addEventListener('click', runAnalysis);
+
+            // Панель статистики
+            document.getElementById('statsToggle').addEventListener('click', toggleStats);
+            document.getElementById('minimizeBtn').addEventListener('click', minimizeStats);
+            document.getElementById('closeBtn').addEventListener('click', hideStats);
+        }
+
+        // Переключение статистики
+        function toggleStats() {
+            const panel = document.getElementById('statsPanel');
+            
+            if (!statsVisible) {
+                panel.classList.add('visible');
+                statsVisible = true;
+                statsMinimized = false;
+            } else {
+                hideStats();
             }
         }
-        createParticles();
-        
-        // Map
-        const map = L.map('map').setView([42.8746, 74.5698], 11);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OSM'
-        }).addTo(map);
-        
-        // Districts
-        const districts = {
-            'октябрьский': {
-                center: [42.8746, 74.5698],
-                bounds: [[42.850, 74.540], [42.900, 74.600]],
-                color: '#495057'
-            },
-            'первомайский': {
-                center: [42.8600, 74.6100],
-                bounds: [[42.830, 74.580], [42.890, 74.640]],
-                color: '#6c757d'
-            },
-            'ленинский': {
-                center: [42.8400, 74.5900],
-                bounds: [[42.810, 74.560], [42.870, 74.620]],
-                color: '#adb5bd'
-            },
-            'свердловский': {
-                center: [42.8300, 74.5500],
-                bounds: [[42.800, 74.520], [42.860, 74.580]],
-                color: '#343a40'
-            }
-        };
-        
-        let districtLayers = {};
-        let selectedModes = [];
-        let selectedDistricts = [];
-        let charts = {};
-        
-        // Init district layers
-        Object.keys(districts).forEach(name => {
-            const district = districts[name];
-            districtLayers[name] = L.rectangle(district.bounds, {
-                color: district.color,
-                weight: 2,
-                opacity: 0,
-                fillOpacity: 0
-            }).addTo(map);
-        });
-        
-        // Stats panel toggle
-        document.getElementById('statsToggle').addEventListener('click', () => {
+
+        // Скрытие статистики
+        function hideStats() {
             const panel = document.getElementById('statsPanel');
-            panel.classList.toggle('open');
-        });
-        
-        // Mode selection
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const mode = this.dataset.mode;
-                if (this.classList.contains('active')) {
-                    this.classList.remove('active');
-                    selectedModes = selectedModes.filter(m => m !== mode);
-                } else {
-                    this.classList.add('active');
-                    selectedModes.push(mode);
-                }
-            });
-        });
-        
-        // District selection
-        document.querySelectorAll('.district-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const district = this.dataset.district;
-                if (this.classList.contains('active')) {
-                    this.classList.remove('active');
-                    selectedDistricts = selectedDistricts.filter(d => d !== district);
-                    districtLayers[district].setStyle({ opacity: 0, fillOpacity: 0 });
-                } else {
-                    this.classList.add('active');
-                    selectedDistricts.push(district);
-                    districtLayers[district].setStyle({ opacity: 0.7, fillOpacity: 0.2 });
-                    map.fitBounds(districts[district].bounds, { padding: [20, 20] });
-                }
-            });
-        });
-        
-        // Analyze
-        document.getElementById('analyzeBtn').addEventListener('click', function() {
+            const btn = document.getElementById('minimizeBtn');
+            
+            panel.classList.remove('visible', 'minimized');
+            btn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            statsVisible = false;
+            statsMinimized = false;
+        }
+
+        // Минимизация статистики
+        function minimizeStats() {
+            const panel = document.getElementById('statsPanel');
+            const btn = document.getElementById('minimizeBtn');
+            
+            if (!statsMinimized) {
+                panel.classList.add('minimized');
+                btn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                statsMinimized = true;
+            } else {
+                panel.classList.remove('minimized');
+                btn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                statsMinimized = false;
+            }
+        }
+
+        // Запуск анализа
+        async function runAnalysis() {
+            if (isAnalyzing) return;
+            
             if (!selectedModes.length) {
-                showNotification('Выберите режим', 'warning');
+                showNotification('Выберите режимы', 'warning');
                 return;
             }
             if (!selectedDistricts.length) {
-                showNotification('Выберите район', 'warning');
+                showNotification('Выберите районы', 'warning');
                 return;
             }
-            
+
+            isAnalyzing = true;
+            const btn = document.getElementById('analyzeBtn');
             const loading = document.getElementById('loading');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Анализ...';
             loading.classList.remove('d-none');
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>АНАЛИЗ...';
             
-            fetch('/api/analyze/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    modes: selectedModes,
-                    districts: selectedDistricts
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                loading.classList.add('d-none');
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-chart-line me-2"></i>АНАЛИЗ';
+            try {
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
-                if (data.status === 'success') {
-                    showNotification('Анализ завершен', 'success');
-                    updateStatistics(generateMockData());
-                    document.getElementById('statsPanel').classList.add('open');
-                } else {
-                    showNotification('Ошибка анализа', 'error');
-                }
-            })
-            .catch(error => {
+                const data = generateData();
+                await updateStats(data);
+                
+                if (!statsVisible) toggleStats();
+                
+                showNotification('Анализ завершен', 'success');
+                
+            } catch (error) {
+                showNotification('Ошибка анализа', 'error');
+            } finally {
                 loading.classList.add('d-none');
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-chart-line me-2"></i>АНАЛИЗ';
-                showNotification('Ошибка соединения', 'error');
-            });
-        });
-        
-        // Notification
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.style.cssText = `
-                position: fixed; top: 20px; right: 20px; z-index: 9999;
-                padding: 1rem 2rem; border-radius: 8px; color: white;
-                font-weight: 600; transform: translateX(100%);
-                transition: transform 0.3s ease;
-                background: ${type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#dc3545'};
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            `;
-            
-            document.body.appendChild(notification);
-            setTimeout(() => notification.style.transform = 'translateX(0)', 100);
-            setTimeout(() => {
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => document.body.removeChild(notification), 300);
-            }, 3000);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play me-2"></i>Анализ';
+                isAnalyzing = false;
+            }
         }
-        
-        // Mock data generator
-        function generateMockData() {
+
+        // Генерация данных
+        function generateData() {
+            const mult = selectedModes.length * selectedDistricts.length;
             return {
-                total: Math.floor(Math.random() * 200) + 100,
-                coverage: Math.floor(Math.random() * 40) + 60,
-                density: (Math.random() * 5 + 2).toFixed(1),
-                schools: Math.floor(Math.random() * 50) + 20,
-                kindergartens: Math.floor(Math.random() * 30) + 15,
-                hospitals: Math.floor(Math.random() * 15) + 5,
-                fireStations: Math.floor(Math.random() * 10) + 3
+                total: 40 + (mult * 10),
+                coverage: Math.min(95, 65 + (mult * 4)),
+                efficiency: Math.min(92, 70 + (mult * 3)),
+                density: (2.5 + (mult * 0.3)).toFixed(1),
+                education: 15 + Math.floor(mult * 2),
+                healthcare: 10 + Math.floor(mult * 1.5),
+                fire: 6 + Math.floor(mult * 1),
+                districts: selectedDistricts.map(() => Math.floor(10 + Math.random() * 20)),
+                trends: Array.from({length: 6}, () => Math.floor(60 + Math.random() * 30))
             };
         }
-        
-        // Update statistics
-        function updateStatistics(data) {
-            document.getElementById('totalObjects').textContent = data.total;
-            document.getElementById('districtCoverage').textContent = data.coverage + '%';
+
+        // Обновление статистики
+        async function updateStats(data) {
+            await Promise.all([
+                animateCounter('totalObjects', data.total),
+                animateCounter('coverage', Math.floor(data.coverage)),
+                animateCounter('efficiency', Math.floor(data.efficiency)),
+                animateCounter('eduCount', data.education),
+                animateCounter('healthCount', data.healthcare),
+                animateCounter('fireCount', data.fire)
+            ]);
+            
             document.getElementById('density').textContent = data.density;
-            document.getElementById('schoolsCount').textContent = data.schools;
-            document.getElementById('kindergartensCount').textContent = data.kindergartens;
-            document.getElementById('hospitalsCount').textContent = data.hospitals;
-            document.getElementById('fireStationsCount').textContent = data.fireStations;
             
-            // Progress bars
-            const total = data.schools + data.kindergartens + data.hospitals + data.fireStations;
-            document.getElementById('schoolsProgress').style.width = (data.schools / total * 100) + '%';
-            document.getElementById('kindergartensProgress').style.width = (data.kindergartens / total * 100) + '%';
-            document.getElementById('hospitalsProgress').style.width = (data.hospitals / total * 100) + '%';
-            document.getElementById('fireStationsProgress').style.width = (data.fireStations / total * 100) + '%';
+            setTimeout(() => {
+                const total = data.education + data.healthcare + data.fire;
+                document.getElementById('eduProgress').style.width = `${(data.education / total * 100)}%`;
+                document.getElementById('healthProgress').style.width = `${(data.healthcare / total * 100)}%`;
+                document.getElementById('fireProgress').style.width = `${(data.fire / total * 100)}%`;
+            }, 500);
             
-            // Charts
-            updateCharts(data);
+            setTimeout(() => {
+                updateCharts(data);
+                updateRecommendations(data);
+            }, 1000);
         }
-        
-        // Charts
+
+        // Анимация счетчика
+        function animateCounter(id, target) {
+            return new Promise(resolve => {
+                const element = document.getElementById(id);
+                const duration = 1500;
+                const start = Date.now();
+                
+                function update() {
+                    const elapsed = Date.now() - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const current = Math.floor(target * progress);
+                    
+                    element.textContent = current;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        resolve();
+                    }
+                }
+                
+                requestAnimationFrame(update);
+            });
+        }
+
+        // Обновление графиков
         function updateCharts(data) {
-            // District chart
+            // График районов
+            const ctx1 = document.getElementById('districtChart').getContext('2d');
             if (charts.district) charts.district.destroy();
-            charts.district = new Chart(document.getElementById('districtChart'), {
+            
+            charts.district = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
                     labels: selectedDistricts,
                     datasets: [{
-                        data: selectedDistricts.map(() => Math.floor(Math.random() * 50) + 10),
-                        backgroundColor: ['#495057', '#6c757d', '#adb5bd', '#343a40']
+                        data: data.districts,
+                        backgroundColor: ['#1e3a8a', '#2563eb', '#374151', '#1f2937'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#374151', font: { size: 10 } }
+                        }
+                    }
                 }
             });
+
+            // График трендов
+            const ctx2 = document.getElementById('trendChart').getContext('2d');
+            if (charts.trend) charts.trend.destroy();
             
-            // Efficiency chart
-            if (charts.efficiency) charts.efficiency.destroy();
-            charts.efficiency = new Chart(document.getElementById('efficiencyChart'), {
-                type: 'bar',
+            charts.trend = new Chart(ctx2, {
+                type: 'line',
                 data: {
-                    labels: ['Школы', 'Садики', 'Больницы', 'Пожарные'],
+                    labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
                     datasets: [{
-                        data: [data.schools, data.kindergartens, data.hospitals, data.fireStations],
-                        backgroundColor: '#6c757d'
+                        label: 'Эффективность',
+                        data: data.trends,
+                        borderColor: '#1e3a8a',
+                        backgroundColor: 'rgba(30, 58, 138, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: { labels: { color: '#374151', font: { size: 10 } } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: '#6b7280', font: { size: 9 } },
+                            grid: { color: '#e5e7eb' }
+                        },
+                        x: {
+                            ticks: { color: '#6b7280', font: { size: 9 } },
+                            grid: { color: '#e5e7eb' }
+                        }
+                    }
                 }
             });
         }
+
+        // Обновление рекомендаций
+        function updateRecommendations(data) {
+            const rec = document.getElementById('recommendations');
+            let html = '';
+            
+            if (data.efficiency >= 85) {
+                html += `
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
+                        <i class="fas fa-check me-2" style="color: #10b981;"></i>
+                        Высокая эффективность
+                    </div>
+                `;
+            }
+            
+            if (data.education < 18) {
+                html += `
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 6px; padding: 1rem; margin-bottom: 1rem;">
+                        <i class="fas fa-exclamation-triangle me-2" style="color: #ef4444;"></i>
+                        Нехватка образовательных учреждений
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div style="background: rgba(30, 58, 138, 0.1); border: 1px solid #1e3a8a; border-radius: 6px; padding: 1rem; text-align: center;">
+                    <i class="fas fa-info-circle me-2" style="color: #1e3a8a;"></i>
+                    Оптимальное расстояние: 1.5 км
+                </div>
+            `;
+            
+            rec.innerHTML = html;
+        }
+
+        // Уведомления
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `<i class="fas fa-info-circle me-2"></i>${message}`;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 400);
+            }, 3000);
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            initHandlers();
+        });
     </script>
 </body>
-</html> 
+</html>
